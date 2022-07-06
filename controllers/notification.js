@@ -51,6 +51,75 @@ module.exports = async (req, res) => {
     }
 }
 
+function fuzzy(waterLevel, weatherData){
+    let waterWeight;
+    let tempWeight;
+    let humWeight;
+
+    let temp = weatherData.data.temperature;
+    let hum = weatherData.data.humidity;
+
+    switch(waterLevel) {
+        case waterLevel < 333:
+            waterWeight = 1;
+            break;
+        case waterLevel >= 333 && waterLevel < 666:
+            waterWeight = 2;
+            break;
+        case waterLevel >= 666 && waterLevel < 800:
+            waterWeight = 3;
+            break;
+        case waterLevel >= 800:
+            waterWeight  = 4;
+            break;
+    }
+
+    switch(temp) {
+        case temp < 333:
+            tempWeight = 1;
+            break;
+        case temp >= 333 && temp < 666:
+            tempWeight = 2;
+            break;
+        case temp >= 666 && temp < 800:
+            tempWeight = 3;
+            break;
+        case temp >= 800:
+            tempWeight  = 4;
+            break;
+    }
+
+    switch(hum) {
+        case hum < 333:
+            waterWeight = 1;
+            break;
+        case hum >= 333 && hum < 666:
+            waterWeight = 2;
+            break;
+        case hum >= 666 && hum < 800:
+            waterLevel = 3;
+            break;
+        case hum >= 800:
+            waterLevel  = 4;
+            break;
+    }
+
+    switch(waterLevel) {
+        case waterLevel < 333:
+            waterWeight = 1;
+            break;
+        case waterLevel >= 333 && waterLevel < 666:
+            waterWeight = 2;
+            break;
+        case waterLevel >= 666 && waterLevel < 800:
+            humWeight = 3;
+            break;
+        case waterLevel >= 800:
+            humWeight  = 4;
+            break;
+    }
+}
+
 async function sendMenssageTelegram(message) {
     var config = {
         method: 'post',
