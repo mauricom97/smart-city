@@ -11,12 +11,12 @@ module.exports = async (req, res) => {
         
         board.on("ready", async function () {
             const sensor = new Sensor("A0")
-           let ola =  await sensor.on("change", function() {
+           let changeLevel =  await sensor.on("change", function() {
                 nivelDaAgua = this.value
                 console.log(nivelDaAgua)
                 setData(nivelDaAgua)
             })
-            console.log(ola.value)
+            console.log(changeLevel.value)
         })
 
         function setData(value) {
@@ -30,15 +30,14 @@ module.exports = async (req, res) => {
         };
 
         await axios(config)
-            .then((response) => {
+            .then(async (response) => {
                 console.log(JSON.stringify(response.data));
                 const dataWeather = response.data
-                nivelDaAgua = nivelDaAgua ? nivelDaAgua : 0
+                nivelDaAgua = nivelDaAgua ? nivelDaAgua : 400
                 
-                fuzzy(nivelDaAgua, dataWeather)
-
-                
-                const message = `Bom dia\n\nTemperatura em ${response.data.name}: ${response.data.data.temperature}\nSensacao termica: ${response.data.data.sensation}\nCondicao: ${response.data.data.condition}\nUmidade do ar: ${response.data.data.humidity}\nNivel da agua: ${nivelDaAgua}`
+                let message = fuzzy(nivelDaAgua, dataWeather)
+                console.log('================================')
+                console.log(message)
                 sendMenssageTelegram(message)
             })
             .catch(function (error) {
@@ -52,72 +51,65 @@ module.exports = async (req, res) => {
 }
 
 function fuzzy(waterLevel, weatherData){
-    let waterWeight;
-    let tempWeight;
-    let humWeight;
+    
+    let waterWeight = null
+    let tempWeight = null
+    let humWeight = null
 
     let temp = weatherData.data.temperature;
     let hum = weatherData.data.humidity;
+    console.log(weatherData.data.temperature, weatherData.data.humidity)
+    if(waterLevel < 100){
+        waterWeight = 1
+    }
+    else if(waterLevel >= 200 && waterLevel < 400){
+        waterWeight = 2
+    }
+    else if(waterLevel >= 400 && waterLevel < 600){
+        waterWeight = 3
+    }
+    else if(waterLevel >= 600){
+        waterWeight = 15
+    }
+    
+if(temp < 0) {
+    tempWeight = 0
+}
+else if(temp >= 0 && temp < 25) {
+    tempWeight = 2
+}
+else if(temp >= 25 && temp < 30) {
+    tempWeight = 3
+}
+else {
+    tempWeight = 5
+}
 
-    switch(waterLevel) {
-        case waterLevel < 333:
-            waterWeight = 1;
-            break;
-        case waterLevel >= 333 && waterLevel < 666:
-            waterWeight = 2;
-            break;
-        case waterLevel >= 666 && waterLevel < 800:
-            waterWeight = 3;
-            break;
-        case waterLevel >= 800:
-            waterWeight  = 4;
-            break;
+if(hum){
+    if(hum < 333){
+        humWeight = 1;
+    }
+    else if(hum >= 333 && hum < 666){
+        humWeight = 2;
+    }
+    else  if(hum >= 666 && hum < 800){
+        humWeight = 3;
+    } else{
+        humWeight = 5;
+    }
+}
+
+    let msg = ''
+    console.log(waterWeight, tempWeight, humWeight)
+    let total = waterWeight + tempWeight + humWeight;
+    if(total){
+        if(total < 6){ msg += "Chance de alagamento baixa\n"}
+        else if(total >= 6 && total < 10){ msg += "Chance de alagamento media\n"}
+        else if(total >= 10 && total < 15){ msg += "Chance de alagamento alta\n"}
+        else if(total >= 15){ msg += "Chance de alagamento muito alta\n"}
     }
 
-    switch(temp) {
-        case temp < 333:
-            tempWeight = 1;
-            break;
-        case temp >= 333 && temp < 666:
-            tempWeight = 2;
-            break;
-        case temp >= 666 && temp < 800:
-            tempWeight = 3;
-            break;
-        case temp >= 800:
-            tempWeight  = 4;
-            break;
-    }
-
-    switch(hum) {
-        case hum < 333:
-            waterWeight = 1;
-            break;
-        case hum >= 333 && hum < 666:
-            waterWeight = 2;
-            break;
-        case hum >= 666 && hum < 800:
-            waterLevel = 3;
-            break;
-        case hum >= 800:
-            waterLevel  = 4;
-            break;
-    }
-
-    switch(waterLevel) {
-        case waterLevel < 333:
-            waterWeight = 1;
-            break;
-        case waterLevel >= 333 && waterLevel < 666:
-            waterWeight = 2;
-            break;
-        case waterLevel >= 666 && waterLevel < 800:
-            humWeight = 3;
-            break;
-        case waterLevel >= 800:
-            humWeight  = 4;
-            break;
-    }
+    return msg
 }
 
 async function sendMenssageTelegram(message) {
